@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	api "github.com/isseii10/proglog/api/v1"
+	"github.com/isseii10/proglog/internal/auth"
 	"github.com/isseii10/proglog/internal/config"
 	"github.com/isseii10/proglog/internal/log"
 	"github.com/stretchr/testify/require"
@@ -54,7 +55,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		require.NoError(t, err)
 		tlsCreds := credentials.NewTLS(tlsConfig)
 		opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
-		conn, err := grpc.Dial(l.Addr().String(), opts...)
+		conn, err := grpc.NewClient(l.Addr().String(), opts...)
 		require.NoError(t, err)
 		client := api.NewLogClient(conn)
 		return conn, client, opts
@@ -89,7 +90,8 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	cfg = &Config{
-		CommitLog: clog,
+		CommitLog:  clog,
+		Authorizer: auth.New(config.ACLModelFile, config.ACLPolicyFile),
 	}
 	if fn != nil {
 		fn(cfg)
@@ -99,7 +101,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	go func() {
-		server.Serve(l)
+		_ = server.Serve(l)
 	}()
 
 	return rootClient, nobodyClient, cfg, func() {
