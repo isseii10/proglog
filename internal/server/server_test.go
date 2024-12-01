@@ -11,6 +11,7 @@ import (
 	"github.com/isseii10/proglog/internal/log"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
@@ -20,6 +21,7 @@ func TestServer(t *testing.T) {
 		"produce/consume a mesdsage to/from the log succeeds": testProduceConsume,
 		"produce/consume stream succeeds":                     testProduceConsumeStream,
 		"consume past log voundary fails":                     testConsumePastBoundary,
+		"unauthorized fails":                                  testUnauhtorized,
 	}
 
 	for scenario, fn := range scenarios {
@@ -167,6 +169,30 @@ func testProduceConsumeStream(t *testing.T, client, _ api.LogClient, config *Con
 				Offset: uint64(i),
 			})
 		}
+	}
+}
+
+func testUnauhtorized(t *testing.T, _, client api.LogClient, config *Config) {
+	ctx := context.Background()
+
+	produce, err := client.Produce(ctx, &api.ProduceRequest{Record: &api.Record{
+		Value: []byte("Hello world"),
+	}})
+	if produce != nil {
+		t.Fatalf("produce response should be nil")
+	}
+	gotCode, wantCode := status.Code(err), codes.PermissionDenied
+	if gotCode != wantCode {
+		t.Fatalf("got code: %d, want code: %d", gotCode, wantCode)
+	}
+
+	consume, err := client.Consume(ctx, &api.ConsumeRequest{Offset: 0})
+	if consume != nil {
+		t.Fatalf("consume response should be nil")
+	}
+	gotCode, wantCode = status.Code(err), codes.PermissionDenied
+	if gotCode != wantCode {
+		t.Fatalf("got code: %d, want code: %d", gotCode, wantCode)
 	}
 }
 
