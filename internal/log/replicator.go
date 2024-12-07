@@ -42,6 +42,20 @@ func (r *Replicator) Join(name, addr string) error {
 	return nil
 }
 
+func (r *Replicator) Leave(name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.init()
+
+	if _, ok := r.servers[name]; !ok {
+		// すでにleaveしている
+		return nil
+	}
+	close(r.servers[name])
+	delete(r.servers, name)
+	return nil
+}
+
 func (r *Replicator) replicate(addr string, leave chan struct{}) {
 	cc, err := grpc.NewClient(addr, r.DialOptions...)
 	if err != nil {
@@ -85,20 +99,6 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 			}
 		}
 	}
-}
-
-func (r *Replicator) Leave(name string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.init()
-
-	if _, ok := r.servers[name]; !ok {
-		// すでにleaveしている
-		return nil
-	}
-	close(r.servers[name])
-	delete(r.servers, name)
-	return nil
 }
 
 func (r *Replicator) init() {
