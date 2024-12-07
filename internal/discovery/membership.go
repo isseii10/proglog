@@ -34,6 +34,7 @@ type Config struct {
 	StartJoinAddrs []string
 }
 
+// ここでserf.Join()をしてクラスタに参加している
 func (m *MemberShip) setupSerf() error {
 	addr, err := net.ResolveTCPAddr("tcp", m.BindAddr)
 	if err != nil {
@@ -51,7 +52,9 @@ func (m *MemberShip) setupSerf() error {
 	if err != nil {
 		return err
 	}
+
 	go m.eventHandler()
+
 	if m.StartJoinAddrs != nil {
 		_, err = m.serf.Join(m.StartJoinAddrs, true)
 		if err != nil {
@@ -107,6 +110,7 @@ func (m *MemberShip) Members() []serf.Member {
 	return m.serf.Members()
 }
 
+// NOTE: ここでserf.Leave()をしてクラスタからLeaveしている
 func (m *MemberShip) Leave() error {
 	return m.serf.Leave()
 }
